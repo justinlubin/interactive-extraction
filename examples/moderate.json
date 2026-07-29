@@ -1,0 +1,51 @@
+{
+  "graph": {
+    "nodes": {
+      "A": { "metadata": { "kind": "OR" } },
+
+      "B": { "metadata": { "kind": "OR" } },
+      "C": { "metadata": { "kind": "OR" } },
+      "D": { "metadata": { "kind": "OR" } },
+
+      "B1": { "metadata": { "kind": "OR" } },
+      "B2": { "metadata": { "kind": "OR" } },
+      "C1": { "metadata": { "kind": "OR" } },
+      "C2": { "metadata": { "kind": "OR" } },
+      "D1": { "metadata": { "kind": "OR" } },
+      "D2": { "metadata": { "kind": "OR" } },
+
+      "f": { "metadata": { "kind": "AND" } },
+      "g": { "metadata": { "kind": "AND" } },
+
+      "b1": { "metadata": { "kind": "AND" } },
+      "b2": { "metadata": { "kind": "AND" } },
+      "c": { "metadata": { "kind": "AND" } },
+      "d": { "metadata": { "kind": "AND" } }
+    },
+    "edges": [
+      { "source": "A", "target": "f" },
+      { "source": "A", "target": "g" },
+      { "source": "f", "target": "B" },
+      { "source": "f", "target": "C" },
+      { "source": "g", "target": "C" },
+      { "source": "g", "target": "D" },
+
+      { "source": "B", "target": "b1" },
+      { "source": "B", "target": "b2" },
+      { "source": "C", "target": "c" },
+      { "source": "D", "target": "d" },
+
+      { "source": "b1", "target": "B1" },
+      { "source": "b2", "target": "B2" },
+
+      { "source": "c", "target": "C1" },
+      { "source": "c", "target": "C2" },
+
+      { "source": "d", "target": "D1" },
+      { "source": "d", "target": "D2" }
+    ],
+    "metadata": {
+      "goal": "A"
+    }
+  }
+}
