@@ -1,12 +1,41 @@
+mod timer;
+
+use std::fmt::Display;
 use std::io::{self, Write};
 use std::process::Command;
 use std::{collections::HashMap, error::Error, fs::File, io::BufReader, path::Path};
 
-use pbn::Step;
+use pbn::{Step, StepProvider, Timer, ValidityChecker};
 
+#[derive(Debug)]
 enum AOStep {
     Prune(aograph::AIdx),
     Seq(Vec<AOStep>, String),
+}
+
+impl AOStep {
+    fn show(&self, ao: &aograph::Graph) -> String {
+        match self {
+            AOStep::Prune(aidx) => format!("prune {}", ao.and_at(*aidx)),
+            AOStep::Seq(aosteps, label) => {
+                format!(
+                    "{} ({})",
+                    label,
+                    aosteps
+                        .iter()
+                        .map(|s| s.show(&ao))
+                        .collect::<Vec<_>>()
+                        .join(", ")
+                )
+            }
+        }
+    }
+}
+
+fn siblings(ao: &aograph::Graph, aidx: aograph::AIdx) -> Vec<aograph::AIdx> {
+    ao.providers(ao.conclusion(aidx))
+        .filter(|a| *a != aidx)
+        .collect()
 }
 
 impl pbn::Step for AOStep {
@@ -16,8 +45,7 @@ impl pbn::Step for AOStep {
         match self {
             AOStep::Prune(aidx) => {
                 let mut res = e.clone();
-                let siblings = e.providers(e.conclusion(*aidx)).collect::<Vec<_>>();
-                if siblings.len() == 1 {
+                if siblings(e, *aidx).is_empty() {
                     return None;
                 }
                 res.and_remove(*aidx);
@@ -68,41 +96,88 @@ fn display(path_prefix: &Path, ao: &aograph::Graph) -> Result<(), Box<dyn Error>
     Ok(())
 }
 
-fn parse_single_step(ao: &aograph::Graph, input: &str) -> Option<AOStep> {
-    let aidx = ao.find_and_by_id(input)?;
-    Some(AOStep::Prune(aidx))
+fn children_with_siblings(ao: &aograph::Graph) -> Vec<aograph::AIdx> {
+    ao.and_indexes()
+        .filter(|aidx| !siblings(&ao, *aidx).is_empty())
+        .collect()
 }
 
-fn parse_step(ao: &aograph::Graph, input: &str) -> Option<AOStep> {
-    if input.contains(";") {
-        let mut steps = vec![];
-        for part in input.split(";") {
-            steps.push(parse_single_step(ao, part)?);
+struct All;
+
+impl<T: Timer> StepProvider<T> for All {
+    type Step = AOStep;
+
+    fn provide(
+        &mut self,
+        _timer: &T,
+        e: &<Self::Step as Step>::Exp,
+    ) -> Result<Vec<Self::Step>, T::EarlyCutoff> {
+        let mut res = vec![];
+        for aidx in children_with_siblings(e) {
+            res.push(AOStep::Prune(aidx))
         }
-        Some(AOStep::Seq(steps, "".to_owned()))
-    } else {
-        parse_single_step(ao, input)
+        Ok(res)
+    }
+}
+
+struct Check;
+
+impl ValidityChecker for Check {
+    type Exp = aograph::Graph;
+
+    fn check(&mut self, e: &Self::Exp) -> bool {
+        children_with_siblings(e).is_empty()
     }
 }
 
 fn main() -> Result<(), Box<dyn Error>> {
     let mut ao = read_ao(Path::new("examples/moderate.json"))?;
-    loop {
-        display(Path::new("out/out.dot"), &ao)?;
+    let timer = timer::Timer::infinite();
+    let mut controller = pbn::Controller::new(timer, All, Check, ao, true);
 
-        let mut input = String::new();
-        io::stdin().read_line(&mut input)?;
-        let input = input.trim();
-        let Some(step) = parse_step(&ao, &input) else {
-            println!("Cannot parse step");
-            continue;
+    while !controller.valid() {
+        display(Path::new("out/out.dot"), controller.working_expression())?;
+        display(Path::new("out/out.dot"), controller.working_expression())?;
+
+        let mut options = controller.provide()?;
+
+        if options.is_empty() {
+            println!("Not possible!");
+            return Ok(());
+        }
+
+        for (i, s) in options.iter().enumerate() {
+            println!("  {}) {}", i + 1, s.show(controller.working_expression()));
+        }
+
+        let idx = loop {
+            print!("Select a step ('q' to quit): ");
+            std::io::stdout().flush().unwrap();
+
+            let mut input = String::new();
+            std::io::stdin().read_line(&mut input).unwrap();
+            let input = input.trim();
+
+            if input == "q" {
+                return Ok(());
+            }
+
+            match input.parse::<usize>() {
+                Ok(choice) => {
+                    if 1 <= choice && choice <= options.len() {
+                        break choice - 1;
+                    } else {
+                        continue;
+                    }
+                }
+                Err(_) => continue,
+            };
         };
 
-        let Some(new_ao) = step.apply(&ao) else {
-            println!("Cannot apply step");
-            continue;
-        };
-
-        ao = new_ao;
+        controller.decide(options.swap_remove(idx))
     }
+
+    display(Path::new("out/out.dot"), controller.working_expression())?;
+    println!("All done!");
+    Ok(())
 }

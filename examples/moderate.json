@@ -7,13 +7,6 @@
       "C": { "metadata": { "kind": "OR" } },
       "D": { "metadata": { "kind": "OR" } },
 
-      "B1": { "metadata": { "kind": "OR" } },
-      "B2": { "metadata": { "kind": "OR" } },
-      "C1": { "metadata": { "kind": "OR" } },
-      "C2": { "metadata": { "kind": "OR" } },
-      "D1": { "metadata": { "kind": "OR" } },
-      "D2": { "metadata": { "kind": "OR" } },
-
       "f": { "metadata": { "kind": "AND" } },
       "g": { "metadata": { "kind": "AND" } },
 
@@ -33,16 +26,7 @@
       { "source": "B", "target": "b1" },
       { "source": "B", "target": "b2" },
       { "source": "C", "target": "c" },
-      { "source": "D", "target": "d" },
-
-      { "source": "b1", "target": "B1" },
-      { "source": "b2", "target": "B2" },
-
-      { "source": "c", "target": "C1" },
-      { "source": "c", "target": "C2" },
-
-      { "source": "d", "target": "D1" },
-      { "source": "d", "target": "D2" }
+      { "source": "D", "target": "d" }
     ],
     "metadata": {
       "goal": "A"

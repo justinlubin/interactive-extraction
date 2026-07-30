@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-aograph = "0.7.0"
+aograph = "0.7.0" 
+instant = { version = "0.1.13", features = ["wasm-bindgen"] }
 jsongraph = "0.1.0"
 pbn = "0.4.0"
 serde = "1.0.229"
